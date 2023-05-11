@@ -12,6 +12,7 @@ const PDFUploader = () => {
     const [rectangles, setRectangles] = useState([]);
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
     const [endPos, setEndPos] = useState({ x: 0, y: 0 });
+    
   
     const onFileChange = (event) => {
       const file = event.target.files[0];
@@ -70,35 +71,53 @@ const PDFUploader = () => {
         context.strokeRect(x, y, width, height);
       };
 
-    const stopDrawing = ({ nativeEvent }) => {
+      const stopDrawing = ({ nativeEvent }) => {
         setIsDrawing(false);
         const { offsetX, offsetY } = nativeEvent;
-        setEndPos({ x: offsetX, y: offsetY });
-    
-        const width = Math.abs(offsetX - startPos.x);
-        const height = Math.abs(offsetY - startPos.y);
-        const rect = {
-        x: Math.min(startPos.x, offsetX),
-        y: Math.min(startPos.y, offsetY),
-        width,
-        height,
-        };
-        setRectangles((prevRectangles) => [...prevRectangles, rect]);
-    };
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvas.width / rect.width;
       
-    const handleSubmit = async (event) => {
-    event.preventDefault();
-    try {
-        const response = await axios.post('http://127.0.0.1:5000/process_rectangles', { rectangles });
-        if (response.status === 200) {
-        console.log('Rectangles processed successfully');
-        } else {
-        console.error('Failed to process rectangles');
+        const x1 = Math.round((Math.min(startPos.x, offsetX) - rect.left) * scale);
+        const y1 = Math.round((Math.min(startPos.y, offsetY) - rect.top) * scale);
+        const x2 = Math.round((Math.max(startPos.x, offsetX) - rect.left) * scale);
+        const y2 = Math.round((Math.max(startPos.y, offsetY) - rect.top) * scale);
+      
+        setRectangles((prevRectangles) => [  ...prevRectangles,  [x1, y1, x2, y2]
+        ]);
+
+          
+      };      
+      
+      
+      const handleSubmit = async (event) => {
+        event.preventDefault();
+        if (rectangles.length === 0) {
+            console.error('No rectangles to process');
+            return;
         }
-    } catch (error) {
-        console.error(error);
+        
+        const lastRectangle = rectangles[rectangles.length - 1];
+        const formattedRectangle = [
+          lastRectangle[0], 
+          lastRectangle[1], 
+          lastRectangle[2], 
+          lastRectangle[3]
+        ];
+    
+        try {
+            const response = await axios.post('http://127.0.0.1:5000/process_rectangles', { rectangles: [formattedRectangle] });
+            if (response.status === 200) {
+                console.log('Rectangles processed successfully');
+            } else {
+                console.error('Failed to process rectangles');
+            }
+        } catch (error) {
+            console.error(error);
         }
     };
+    
+      
 
     return (
         <div>
