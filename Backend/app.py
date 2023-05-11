@@ -1,13 +1,18 @@
+import shutil
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from pyhanko.pdf_utils import generic
 from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
 from pyhanko.sign.fields import SigFieldSpec, append_signature_field
 from docusign_esign import EnvelopesApi, EnvelopeDefinition, Document, Signer, CarbonCopy, Recipients, SignHere, Tabs
 from docusign_esign.client.api_client import ApiClient
 import base64
+from PyPDF2 import PdfWriter, PdfReader
+from PyPDF2.generic import DictionaryObject, NumberObject, ArrayObject, NameObject
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+
 
 # DocuSign create envelope function
 def make_envelope(args, pdf_b64):
@@ -53,23 +58,70 @@ def make_envelope(args, pdf_b64):
 
     return envelope_definition
 
-@app.route('/process_rectangles', methods=['POST'])
+"""
+def add_rectangle_annotation(writer, page, rect_coords):
+    # Define the annotation dictionary
+    annot = DictionaryObject({
+        "/Type": NameObject("/Annot"),
+        "/Subtype": NameObject("/Square"),
+        "/Rect": ArrayObject(rect_coords),
+        "/F": NumberObject(4),  # Print the annotation
+        "/BS": DictionaryObject({"/W": NumberObject(1)}),  # Border width
+        "/C": ArrayObject([0, 0, 0])  # Black color
+    })
+
+    # Add the annotation to the page's /Annots array
+    if "/Annots" in page:
+        page["/Annots"].append(annot)
+    else:
+        page.update({NameObject("/Annots"): ArrayObject([annot])})
+
+    # Add the page to writer
+    writer.add_page(page)
+"""
+
+@app.route('/process_rectangles', methods = ['POST'])
 def handle_rectangles():
     data = request.get_json()
     rectangles = data.get('rectangles')
-    
+
     rectangles_processed = []
     if rectangles:
         for rectangle in rectangles:
             x1, y1, x2, y2 = rectangle
-            field_name = f'my_field_name_{x1}_{y1}_{x2}_{y2}' 
-            input_pdf = '/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export.pdf'  
-            output_pdf = '/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export.pdf'  
-            with open(input_pdf, 'rb+') as pdf:
-                w = IncrementalPdfFileWriter(pdf)
-                append_signature_field(w, SigFieldSpec(sig_field_name=field_name, on_page=0, box=(float(x1), float(y1), float(x2), float(y2))))
-                w.write_in_place()
-            
+            field_name = f'my_field_name_{x1}_{y1}_{x2}_{y2}'  # unique field name for each rectangle
+            input_pdf = '/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export.pdf'
+            output_pdf = f'/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export_{x1}_{y1}_{x2}_{y2}.pdf'
+            with open(input_pdf, 'rb') as r:
+                writer = IncrementalPdfFileWriter(r)
+                append_signature_field(writer, SigFieldSpec(sig_field_name=field_name, on_page=0, box=(float(x1), float(y1), float(x2), float(y2))))
+                with open(output_pdf, 'wb') as w:
+                    writer.write(w)
+
+            # shutil.copy(input_pdf, output_pdf)
+
+            # Open the PDF in binary mode for both reading and writing
+            #with open(output_pdf, 'rb+') as r:
+                #w = IncrementalPdfFileWriter(r)
+                #append_signature_field(w, SigFieldSpec(sig_field_name=field_name, on_page=0, box=(float(x1), float(y1), float(x2), float(y2))))
+                #r.seek(0)
+                #with open(output_pdf, 'wb') as w:
+                    #writer.wrtie(w)
+                #reader = PdfReader(r)
+                #writer = PdfWriter()
+
+                #for page_num in range(len(reader.pages)):
+                    #page = reader.pages[page_num]
+                    #if page_num == 0:  # Assuming the signature field is on the first page
+                       # add_rectangle_annotation(writer, page, [int(float(x1)), int(float(y1)), int(float(x2)), int(float(y2))])
+
+                    #writer.add_page(page)
+
+                # Overwrite the existing PDF with the new PDF containing the annotation
+                #r.seek(0)
+                #writer.write(r)
+
+            print(f"Processed rectangle with coordinates: {x1}, {y1}, {x2}, {y2}")
             rectangles_processed.append({
                 "x1": x1,
                 "y1": y1,
