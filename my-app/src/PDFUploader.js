@@ -77,32 +77,37 @@ const PDFUploader = () => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const scale = canvas.width / rect.width;
-      
-        const x1 = Math.round((Math.min(startPos.x, offsetX) - rect.left) * scale);
-        const y1 = Math.round((Math.min(startPos.y, offsetY) - rect.top) * scale);
-        const x2 = Math.round((Math.max(startPos.x, offsetX) - rect.left) * scale);
-        const y2 = Math.round((Math.max(startPos.y, offsetY) - rect.top) * scale);
-      
-        setRectangles((prevRectangles) => [  ...prevRectangles,  [x1, y1, x2, y2]
+    
+        const x1 = Math.round((Math.min(startPos.x, offsetX)) * scale);
+        const y1 = Math.round((Math.min(startPos.y, offsetY)) * scale);
+        const width = Math.round(Math.abs(startPos.x - offsetX) * scale);
+        const height = Math.round(Math.abs(startPos.y - offsetY) * scale);
+    
+        // Ensure that coordinates are non-negative
+        if (x1 < 0 || y1 < 0 || width < 0 || height < 0) {
+            console.error('Invalid rectangle coordinates');
+            return;
+        }
+    
+        setRectangles((prevRectangles) => [
+            ...prevRectangles,
+            [x1, y1, width, height],
         ]);
-
+    };
           
-      };      
-      
-      
       const handleSubmit = async (event) => {
         event.preventDefault();
         if (rectangles.length === 0) {
-            console.error('No rectangles to process');
-            return;
+          console.error('No rectangles to process');
+          return;
         }
-        
+      
         const lastRectangle = rectangles[rectangles.length - 1];
         const formattedRectangle = [
-          lastRectangle[0], 
-          lastRectangle[1], 
-          lastRectangle[2], 
-          lastRectangle[3]
+          Number(lastRectangle[0]), 
+          Number(lastRectangle[1]), 
+          Number(lastRectangle[2]), 
+          Number(lastRectangle[3])
         ];
     
         try {
@@ -116,8 +121,6 @@ const PDFUploader = () => {
             console.error(error);
         }
     };
-    
-      
 
     return (
         <div>

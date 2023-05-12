@@ -136,14 +136,14 @@ def handle_rectangles():
 
         # Prepare envelope arguments (Replace with your actual data)
         envelope_args = {
-            "signer_email": "signer@example.com",
-            "signer_name": "Signer Name",
-            "cc_email": "cc@example.com",
-            "cc_name": "CC Name",
+            "signer_email": "jsy12@duke.edu",
+            "signer_name": "John Yoo",
+            "cc_email": "connor.m.johnson@duke.edu",
+            "cc_name": "Connor Johnson",
             "status": "sent",
             "base_path": "https://demo.docusign.net/restapi",
-            "access_token": "YOUR_ACCESS_TOKEN",
-            "account_id": "YOUR_ACCOUNT_ID"
+            "access_token": "eyJ0eXAiOiJNVCIsImFsZyI6IlJTMjU2Iiwia2lkIjoiNjgxODVmZjEtNGU1MS00Y2U5LWFmMWMtNjg5ODEyMjAzMzE3In0.AQoAAAABAAUABwAAfMItG1PbSAgAALzlO15T20gCAH04YxqavgdLlsttykokmC4VAAEAAAAYAAIAAAAFAAAAHQAAAA0AJAAAADkzMWViNWY1LTNiNmYtNGFlMy1hYjA3LWFiYmQ1NTY5ZDU2OSIAJAAAADkzMWViNWY1LTNiNmYtNGFlMy1hYjA3LWFiYmQ1NTY5ZDU2OTAAgLMk8hRT20g3AEKc9NfIqGBFijF6_SdtO3I.N6dCvbWxp8RIWpWJv7LqG47EBnoqHq9KiDXSWpmHiHj7OWu0xp1NoJtdEnGTbk6ydFR7iWP06jA1TRSZBtog3JL3vny778WzAzZwn2IE55TSuXLRtAi3tp_GB5SD5v-Wh2PEqKfgQcE78GWz6uyiwgnUyw81kCxr_m3mXbZi-h9XWIDkUnKgwJqi8d6wOKt_hUQQ0Rrn5bFex0QVt0HUaJzpdTreIbnMaKPsgCLHQCs2C_4QbXmqbiNtX0f4-ODl_uuRMSHyAFygm5Qn-r24jVucKwO-t28kuShKmf4krcIeElDDAN-RjdudcfHxALjArwSoEkEpsaG5IDzycUo0Bw",
+            "account_id": "b85f42eb-fc86-496f-a541-bede5d095bd0"
         }
 
         # Create the envelope request object
