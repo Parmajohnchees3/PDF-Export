@@ -10,6 +10,7 @@ from docusign_esign.client.api_client import ApiClient
 import base64
 from PyPDF2 import PdfWriter, PdfReader
 from PyPDF2.generic import DictionaryObject, NumberObject, ArrayObject, NameObject
+import os
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
@@ -85,14 +86,16 @@ def add_rectangle_annotation(writer, page, rect_coords):
 def handle_rectangles():
     data = request.get_json()
     rectangles = data.get('rectangles')
+    print(rectangles)
 
     rectangles_processed = []
     if rectangles:
         for rectangle in rectangles:
             x1, y1, x2, y2 = rectangle
             field_name = f'my_field_name_{x1}_{y1}_{x2}_{y2}'  # unique field name for each rectangle
-            input_pdf = '/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export.pdf'
-            output_pdf = f'/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export_{x1}_{y1}_{x2}_{y2}.pdf'
+            input_pdf = os.getcwd() + '/test_doc_PDF_export.pdf'
+            input_split = input_pdf.split('.')
+            output_pdf = input_split[0] + f'_{x1}_{y1}_{x2}_{y2}' + input_split[1]
             with open(input_pdf, 'rb') as r:
                 writer = IncrementalPdfFileWriter(r)
                 append_signature_field(writer, SigFieldSpec(sig_field_name=field_name, on_page=0, box=(float(x1), float(y1), float(x2), float(y2))))
