@@ -136,7 +136,7 @@ def handle_rectangles():
 
         # Prepare envelope arguments (Replace with your actual data)
         envelope_args = {
-            "signer_email": "connor.m.johnson@duke.edu",
+            "signer_email": "cmj70@duke.edu",
             "signer_name": "Connor Johnson",
             "cc_email": "jsy12@duke.edu",
             "cc_name": "John Yoo",
