@@ -1,4 +1,5 @@
 import shutil
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pyhanko.pdf_utils import generic
@@ -136,16 +137,16 @@ def handle_rectangles():
 
         # Prepare envelope arguments (Replace with your actual data)
         envelope_args = {
-            "signer_email": "cmj70@duke.edu",
-            "signer_name": "Connor Johnson",
+            "signer_email": "jsy12@duke.edu",
+            "signer_name": "John Yoo",
             "cc_email": "jsy12@duke.edu",
             "cc_name": "John Yoo",
             "status": "sent",
             "base_path": "https://demo.docusign.net/restapi",
-            "access_token": "ACC_TOKEN",
-            "account_id": "ACC_ID"
+            "access_token": os.getenv('ACC_TOKEN'),
+            "account_id": os.getenv('ACC_ID')
         }
-
+    
         # Create the envelope request object
         envelope_definition = make_envelope(envelope_args, pdf_b64)
         api_client = ApiClient()
