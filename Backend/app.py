@@ -15,6 +15,7 @@ app = Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 
+
 # DocuSign create envelope function
 def make_envelope(args, pdf_b64):
     envelope_definition = EnvelopeDefinition(
@@ -88,8 +89,19 @@ def handle_rectangles():
 
     rectangles_processed = []
     if rectangles:
+        # Assuming standard US Letter size for now, adjust this for your documents
         for rectangle in rectangles:
+            # Convert from canvas to PDF coordinates
             x1, y1, x2, y2 = rectangle
+            pdf_width = 595.28  # width of A4 in points
+            pdf_height = 841.89  # height of A4 in points
+            canvas_width = 794  # width of canvas in pixels
+            canvas_height = 1123  # height of canvas in pixels
+            x1 = x1 * (pdf_width / canvas_width)
+            y1 = pdf_height - (y1 * (pdf_height / canvas_height))  # adjust for origin location
+            x2 = x2 * (pdf_width / canvas_width)
+            y2 = pdf_height - (y2 * (pdf_height / canvas_height))  # adjust for origin location
+
             field_name = f'my_field_name_{x1}_{y1}_{x2}_{y2}'  # unique field name for each rectangle
             input_pdf = '/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export.pdf'
             output_pdf = f'/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export_{x1}_{y1}_{x2}_{y2}.pdf'
@@ -146,7 +158,7 @@ def handle_rectangles():
             "access_token": os.getenv('ACC_TOKEN'),
             "account_id": os.getenv('ACC_ID')
         }
-    
+
         # Create the envelope request object
         envelope_definition = make_envelope(envelope_args, pdf_b64)
         api_client = ApiClient()

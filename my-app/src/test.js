@@ -1,155 +1,117 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.entry";
 import * as pdfjsLib from "pdfjs-dist/build/pdf";
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
 export default function CustomPdfReader() {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
-
   const canvasRef = useRef();
-  const [pdfRef, setPdfRef] = useState(null);
-  const [fileUrl, setFileUrl] = useState(null);
-  const currentPage = 1;
-  const zoomScale = 1;
-  const rotateAngle = 0;
-  var pdf_image = "";
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    const url = URL.createObjectURL(file);
-    setFileUrl(url);
-  };
-
-  let renderTask = null;
-
-  const renderPage = useCallback(
-    (pageNum, pdf = pdfRef) => {
-      pdf &&
-        pdf.getPage(pageNum).then(function (page) {
-          const viewport = page.getViewport({ scale: zoomScale, rotation: rotateAngle });
-          const canvas = canvasRef.current;
-          canvas.height = viewport?.height;
-          canvas.width = viewport?.width;
-          const renderContext = {
-            canvasContext: canvas?.getContext("2d"),
-            viewport: viewport,
-          };
-
-          // cancel previous render task
-          renderTask && renderTask.cancel();
-
-          renderTask = page.render(renderContext);
-        });
-    },
-    [pdfRef, fileUrl]
-  );
-
-  useEffect(() => {
-    if (fileUrl) {
-      const loadingTask = pdfjsLib.getDocument(fileUrl);
-      loadingTask.promise.then(
-        (loadedPdf) => {
-          setPdfRef(loadedPdf);
-          renderPage(currentPage, loadedPdf);
-        },
-        function (reason) {
-          console.error(reason);
-        }
-      );
+  const [pdfDoc, setPdfDoc] = useState(null);
+  const [pageNum, setPageNum] = useState(1);
+  const [scale, setScale] = useState(1.0);
+  const [rotation, setRotation] = useState(0);
+  const [pdfImage, setPdfImage] = useState(null);
+  
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const typedArray = new Uint8Array(this.result);
+        loadDocument(typedArray);
+      };
+      reader.readAsArrayBuffer(file);
     }
-  }, [fileUrl, renderPage]);
-
+  };
+  
+  const loadDocument = async (data) => {
+    const doc = await pdfjsLib.getDocument({data}).promise;
+    setPdfDoc(doc);
+  };
+  
+  // Render the page on pageNum, scale, rotation or document changes
   useEffect(() => {
-    return () => {
-      // cancel render task on unmount
-      renderTask && renderTask.cancel();
+    if (pdfDoc) renderPage(pageNum);
+  }, [pageNum, scale, rotation, pdfDoc]);
+
+  const renderPage = async (num) => {
+    if (!pdfDoc) return;
+
+    const page = await pdfDoc.getPage(num);
+    const viewport = page.getViewport({ scale, rotation });
+
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    const renderContext = {
+      canvasContext: context,
+      viewport
     };
-  }, []);
 
-  var cursorInCanvas = false;
-  var canvasOfDoc = canvasRef?.current;
-  var ctx;
-  var startX;
-  var startY;
-  var offsetX;
-  var offsetY;
-
-  const saveInitialCanvas = () => {
-    if (canvasOfDoc?.getContext) {
-      var canvasPic = new Image();
-      canvasPic.src = canvasOfDoc.toDataURL();
-      pdf_image = canvasPic;
-    }
-  };
-
-  useEffect(() => {
-    if (canvasOfDoc) {
-      ctx = canvasOfDoc.getContext("2d");
-      var canvasOffset = canvasOfDoc.getBoundingClientRect();
-      offsetX = canvasOffset.left;
-      offsetY = canvasOffset.top;
-    }
-  }, [canvasOfDoc, pdfRef, renderPage, fileUrl]);
-
-  useEffect(() => {
-    if (!canvasOfDoc || !renderTask) return;
-
-    const handleMouseIn = (e) => {
-        if (typeof pdf_image == "string") {
-            saveInitialCanvas();
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          startX = ((e.offsetX * canvasOfDoc.width) / canvasOfDoc.clientWidth) | 0;
-          startY = ((e.offsetY * canvasOfDoc.width) / canvasOfDoc.clientWidth) | 0;
-      
-          cursorInCanvas = true;
-    }
-
-    const handleMouseOut = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        cursorInCanvas = false;
-    }
-
-    const handleMouseMove = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!cursorInCanvas) {
-          return;
-        }
-        let mouseX = ((e.offsetX * canvasOfDoc.width) / canvasOfDoc.clientWidth) | 0;
-        let mouseY = ((e.offsetY * canvasOfDoc.width) / canvasOfDoc.clientWidth) | 0;
+    await page.render(renderContext).promise;
     
-        var width = mouseX - startX;
-        var height = mouseY - startY;
-        if (ctx) {
-          ctx?.clearRect(0, 0, canvasOfDoc.width, canvasOfDoc.height);
-          ctx?.drawImage(pdf_image, 0, 0);
-          ctx.beginPath();
-          ctx.rect(startX, startY, width, height);
-          ctx.strokeStyle = "#1B9AFF";
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
+    // Save the rendered PDF as an image
+    const img = new Image();
+    img.src = canvas.toDataURL();
+    setPdfImage(img);
+  };
+
+  // Drawing functions
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
+
+  const handleMouseDown = (e) => {
+    const mouseX = e.nativeEvent.offsetX;
+    const mouseY = e.nativeEvent.offsetY;
+
+    setStartX(mouseX);
+    setStartY(mouseY);
+    setIsDrawing(true);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDrawing) return;
+    
+    const mouseX = e.nativeEvent.offsetX;
+    const mouseY = e.nativeEvent.offsetY;
+
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (pdfImage) {
+      context.drawImage(pdfImage, 0, 0);
     }
+    
+    context.beginPath();
+    context.rect(startX, startY, mouseX - startX, mouseY - startY);
+    context.strokeStyle = "#1B9AFF";
+    context.lineWidth = 1;
+    context.stroke();
+  };
 
-    canvasOfDoc.addEventListener("mousedown", handleMouseIn);
-    canvasOfDoc.addEventListener("mousemove", handleMouseMove);
-    canvasOfDoc.addEventListener("mouseup", handleMouseOut);
-    canvasOfDoc.addEventListener("mouseout", handleMouseOut);
-
-    return () => {
-      canvasOfDoc.removeEventListener("mousedown", handleMouseIn);
-      canvasOfDoc.removeEventListener("mousemove", handleMouseMove);
-      canvasOfDoc.removeEventListener("mouseup", handleMouseOut);
-      canvasOfDoc.removeEventListener("mouseout", handleMouseOut);
-    };
-  }, [canvasOfDoc, renderTask]);
+  const handleMouseUp = () => {
+    setIsDrawing(false);
+  };
 
   return (
-    <>
+    <div>
+      <h1>PDF Export</h1>
       <input type="file" onChange={handleFileChange} accept=".pdf" />
-      <canvas id="pdf-doc" ref={canvasRef} />
-    </>
+      {pdfDoc && <button onClick={() => renderPage(pageNum)}>Submit</button>}
+      <canvas
+        ref={canvasRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseOut={handleMouseUp}
+      />
+    </div>
   );
-}
+
+  }
