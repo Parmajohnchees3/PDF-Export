@@ -3,7 +3,7 @@ import logo from './logo.svg';
 import './App.css';
 import PDFUploader from'./PDFUploader';
 import PDFDrawer from'./PDFDrawer';
-import test from './test';
+import Tester from './Tester';
 
 function App() {
   return (

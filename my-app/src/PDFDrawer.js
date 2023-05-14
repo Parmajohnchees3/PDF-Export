@@ -17,6 +17,7 @@ export default function CustomPdfReader() {
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
   const [isDrawing, setIsDrawing] = useState(false);
+  
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -68,9 +69,10 @@ export default function CustomPdfReader() {
 
   // Drawing functions
 
-    const handleMouseDown = (e) => {
-    const mouseX = e.nativeEvent.offsetX;
-    const mouseY = e.nativeEvent.offsetY;
+  const handleMouseDown = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
     setStartX(mouseX);
     setStartY(mouseY);
@@ -80,8 +82,9 @@ export default function CustomPdfReader() {
   const handleMouseMove = (e) => {
     if (!isDrawing) return;
     
-    const mouseX = e.nativeEvent.offsetX;
-    const mouseY = e.nativeEvent.offsetY;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
@@ -100,8 +103,9 @@ export default function CustomPdfReader() {
   };
 
   const handleMouseUp = (e) => {
-    const mouseX = e.nativeEvent.offsetX;
-    const mouseY = e.nativeEvent.offsetY;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
     let width = mouseX - startX;
     let height = mouseY - startY;
     let x = startX;

@@ -17,13 +17,17 @@ cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 
 # DocuSign create envelope function
-def make_envelope(args, pdf_b64):
+def make_envelope(args, sign_here_tabs, pdf_path):
+    with open(pdf_path, "rb") as pdf_file:
+        pdf_bytes = pdf_file.read()
+    pdf_base64 = base64.b64encode(pdf_bytes).decode("ascii")
+
     envelope_definition = EnvelopeDefinition(
         email_subject="Please sign this document set"
     )
     
     document = Document(
-        document_base64=pdf_b64,
+        document_base64=pdf_base64,
         name="Modified PDF",
         file_extension="pdf",
         document_id="1"
@@ -45,14 +49,8 @@ def make_envelope(args, pdf_b64):
         routing_order="2"
     )
 
-    sign_here = SignHere(
-        anchor_string="**signature_1**",
-        anchor_units="pixels",
-        anchor_y_offset="10",
-        anchor_x_offset="20"
-    )
-
-    signer.tabs = Tabs(sign_here_tabs=[sign_here])
+    # Use sign_here_tabs argument to set the tabs for the signer
+    signer.tabs = Tabs(sign_here_tabs=sign_here_tabs)
 
     recipients = Recipients(signers=[signer], carbon_copies=[cc])
     envelope_definition.recipients = recipients
@@ -60,27 +58,7 @@ def make_envelope(args, pdf_b64):
 
     return envelope_definition
 
-"""
-def add_rectangle_annotation(writer, page, rect_coords):
-    # Define the annotation dictionary
-    annot = DictionaryObject({
-        "/Type": NameObject("/Annot"),
-        "/Subtype": NameObject("/Square"),
-        "/Rect": ArrayObject(rect_coords),
-        "/F": NumberObject(4),  # Print the annotation
-        "/BS": DictionaryObject({"/W": NumberObject(1)}),  # Border width
-        "/C": ArrayObject([0, 0, 0])  # Black color
-    })
 
-    # Add the annotation to the page's /Annots array
-    if "/Annots" in page:
-        page["/Annots"].append(annot)
-    else:
-        page.update({NameObject("/Annots"): ArrayObject([annot])})
-
-    # Add the page to writer
-    writer.add_page(page)
-"""
 
 @app.route('/process_rectangles', methods = ['POST'])
 def handle_rectangles():
@@ -88,6 +66,7 @@ def handle_rectangles():
     rectangles = data.get('rectangles')
 
     rectangles_processed = []
+    sign_here_tabs = []
     if rectangles:
         # Assuming standard US Letter size for now, adjust this for your documents
         for rectangle in rectangles:
@@ -101,38 +80,17 @@ def handle_rectangles():
             y1 = pdf_height - (y1 * (pdf_height / canvas_height))  # adjust for origin location
             x2 = x2 * (pdf_width / canvas_width)
             y2 = pdf_height - (y2 * (pdf_height / canvas_height))  # adjust for origin location
-
-            field_name = f'my_field_name_{x1}_{y1}_{x2}_{y2}'  # unique field name for each rectangle
-            input_pdf = '/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export.pdf'
-            output_pdf = f'/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/Test Doc for PDF Export_{x1}_{y1}_{x2}_{y2}.pdf'
-            with open(input_pdf, 'rb') as r:
-                writer = IncrementalPdfFileWriter(r)
-                append_signature_field(writer, SigFieldSpec(sig_field_name=field_name, on_page=0, box=(float(x1), float(y1), float(x2), float(y2))))
-                with open(output_pdf, 'wb') as w:
-                    writer.write(w)
-
-            # shutil.copy(input_pdf, output_pdf)
-
-            # Open the PDF in binary mode for both reading and writing
-            #with open(output_pdf, 'rb+') as r:
-                #w = IncrementalPdfFileWriter(r)
-                #append_signature_field(w, SigFieldSpec(sig_field_name=field_name, on_page=0, box=(float(x1), float(y1), float(x2), float(y2))))
-                #r.seek(0)
-                #with open(output_pdf, 'wb') as w:
-                    #writer.wrtie(w)
-                #reader = PdfReader(r)
-                #writer = PdfWriter()
-
-                #for page_num in range(len(reader.pages)):
-                    #page = reader.pages[page_num]
-                    #if page_num == 0:  # Assuming the signature field is on the first page
-                       # add_rectangle_annotation(writer, page, [int(float(x1)), int(float(y1)), int(float(x2)), int(float(y2))])
-
-                    #writer.add_page(page)
-
-                # Overwrite the existing PDF with the new PDF containing the annotation
-                #r.seek(0)
-                #writer.write(r)
+            
+            # Create a SignHere tab (field on the document) for each rectangle
+            sign_here = SignHere(
+                document_id="1",
+                page_number="1",
+                x_position=str(max(0, int(x1))),
+                y_position=str(max(0, int(y1))),
+                scale_value="1",
+                optional="false"
+            )
+            sign_here_tabs.append(sign_here)
 
             print(f"Processed rectangle with coordinates: {x1}, {y1}, {x2}, {y2}")
             rectangles_processed.append({
@@ -141,16 +99,11 @@ def handle_rectangles():
                 "x2": x2,
                 "y2": y2
             })
-        
-        # Encode the new PDF to base64
-        with open(output_pdf, "rb") as file:
-            pdf_bytes = file.read()
-        pdf_b64 = base64.b64encode(pdf_bytes).decode("ascii")
 
         # Prepare envelope arguments (Replace with your actual data)
         envelope_args = {
-            "signer_email": "jsy12@duke.edu",
-            "signer_name": "John Yoo",
+            "signer_email": "cmj70@duke.edu",
+            "signer_name": "Connor Johnson",
             "cc_email": "jsy12@duke.edu",
             "cc_name": "John Yoo",
             "status": "sent",
@@ -160,7 +113,7 @@ def handle_rectangles():
         }
 
         # Create the envelope request object
-        envelope_definition = make_envelope(envelope_args, pdf_b64)
+        envelope_definition = make_envelope(envelope_args, sign_here_tabs, '/Users/johnyoo/Documents/Code Projects/PDF-Export/Backend/TestDoc_PDF_Export.pdf')
         api_client = ApiClient()
         api_client.host = envelope_args["base_path"]
         api_client.set_default_header("Authorization", f"Bearer {envelope_args['access_token']}")
@@ -180,6 +133,8 @@ def handle_rectangles():
         response_data = {'success': False, 'message': 'No rectangles received.'}
         
     return jsonify(response_data)
+
+
 
 
 if __name__ == '__main__':
