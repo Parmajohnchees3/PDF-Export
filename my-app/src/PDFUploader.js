@@ -82,6 +82,7 @@ const PDFUploader = () => {
         const y1 = Math.round((Math.min(startPos.y, offsetY)) * scale);
         const width = Math.round(Math.abs(startPos.x - offsetX) * scale);
         const height = Math.round(Math.abs(startPos.y - offsetY) * scale);
+        console.log(`x1: ${x1}, y1: ${y1}, width: ${width}, height: ${height}`);
     
         // Ensure that coordinates are non-negative
         if (x1 < 0 || y1 < 0 || width < 0 || height < 0) {
@@ -101,6 +102,7 @@ const PDFUploader = () => {
           console.error('No rectangles to process');
           return;
         }
+        console.log(`Rectangles: ${rectangles}`);
       
         const lastRectangle = rectangles[rectangles.length - 1];
         const formattedRectangle = [
@@ -137,7 +139,6 @@ const PDFUploader = () => {
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
         ></canvas>
         </div>
       );
